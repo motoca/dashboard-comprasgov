@@ -65,11 +65,19 @@ st.set_page_config(page_title="Dashboard ComprasGov", layout="wide")
 st.title("🔍 Painel de Preços - Compras Públicas (API ARP)")
 
 # Entradas do usuário
-codigo_item = st.text_input("Informe o código do item CATMAT:", "27138")
-data_inicio = st.date_input("Data de início da vigência:", pd.to_datetime("2025-01-01"))
-data_fim = st.date_input("Data de fim da vigência:", pd.to_datetime("2025-04-30"))
+# codigo_item = st.text_input("Informe o código do item CATMAT:", "27138")
+# data_inicio = st.date_input("Data de início da vigência:", pd.to_datetime("2025-01-01"))
+# data_fim = st.date_input("Data de fim da vigência:", pd.to_datetime("2025-04-30"))
 
-if st.button("Consultar Dados do Produto/Serviço"):
+
+with st.sidebar:
+    st.header("🔧 Parâmetros da Pesquisa")
+    codigo_item = st.text_input("Código do item CATMAT:", "27138")
+    data_inicio = st.date_input("Início da vigência:", pd.to_datetime("2025-01-01"))
+    data_fim = st.date_input("Fim da vigência:", pd.to_datetime("2025-04-30"))
+    consultar = st.button("Consultar Dados do Produto/Serviço")
+
+if consultar:
     url = "https://dadosabertos.compras.gov.br/modulo-arp/2_consultarARPItem"
     params = {
         "pagina": 1,
