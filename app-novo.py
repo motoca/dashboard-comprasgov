@@ -4,16 +4,21 @@ import requests
 import pandas as pd
 import plotly.express as px
 
-def plot_price_trend_bar(df, descricao_item):
-    df['dataVigenciaInicial'] = pd.to_datetime(df['dataVigenciaInicial'])
-    df = df.sort_values('dataVigenciaInicial')
+print("INICIANDO O PAINEL DE PREÇOS - COMPRAS PÚBLICAS (API ARP)")
+
+
+import plotly.express as px
+
+def plot_price_trend(df, descricao_item):
+    df['dataVigenciaInicio'] = pd.to_datetime(df['dataVigenciaInicio'])
+    df = df.sort_values('dataVigenciaInicio')
 
     fig = px.bar(
         df,
-        x='dataVigenciaInicial',
+        x='dataVigenciaInicio',
         y='valorUnitario',
         labels={
-            'dataVigenciaInicial': 'Data de Vigência',
+            'dataVigenciaInicio': 'Data de Vigência',
             'valorUnitario': 'Valor Unitário (R$)'
         },
         title=f'Preços por Período - {descricao_item}',
@@ -31,17 +36,14 @@ def plot_price_trend_bar(df, descricao_item):
     )
 
     return fig
-def plot_price_trend_line(df, descricao_item):
-    df['dataVigenciaInicial'] = pd.to_datetime(df['dataVigenciaInicial'])
-    df = df.sort_values('dataVigenciaInicial')
 
     fig = px.line(
         df,
-        x='dataVigenciaInicial',
+        x='dataVigenciaInicio',
         y='valorUnitario',
         markers=True,
         labels={
-            'dataVigenciaInicial': 'Data de Vigência',
+            'dataVigenciaInicio': 'Data de Vigência',
             'valorUnitario': 'Valor Unitário (R$)'
         },
         title=f'Evolução dos Preços - {descricao_item}',
@@ -80,7 +82,6 @@ if st.button("Consultar Dados do Produto/Serviço"):
     }
 
     with st.spinner("Consultando dados..."):
-        print(f"URL: {requests}")
         resposta = requests.get(url, params=params)
         if resposta.status_code == 200:
             dados_json = resposta.json().get("resultado", [])
@@ -91,23 +92,13 @@ if st.button("Consultar Dados do Produto/Serviço"):
 
                 st.success(f"{len(df)} registros encontrados.")
 
-                fig = plot_price_trend_bar(df, df["descricaoItem"].iloc[0])
+                fig = plot_price_trend(df, df["descricaoItem"].iloc[0])
                 st.plotly_chart(fig, use_container_width=True)
-                
-                df_exibicao = df[[
-                    "descricaoItem", "valorUnitario", "quantidadeHomologadaItem", "nomeRazaoSocialFornecedor", 
+
+                st.dataframe(df[[
+                    "descricaoItem", "valorUnitario", "nomeRazaoSocialFornecedor", 
                     "nomeUnidadeGerenciadora", "nomeModalidadeCompra", "dataVigenciaInicial", "dataVigenciaFinal"
-                ]].rename(columns={
-                    "descricaoItem": "Descrição do Item",
-                    "valorUnitario": "Valor (R$)",
-                    "quantidadeHomologadaItem": "Qtde.",
-                    "nomeRazaoSocialFornecedor": "Fornecedor",
-                    "nomeUnidadeGerenciadora": "Comprador",
-                    "nomeModalidadeCompra": "Modalidade",
-                    "dataVigenciaInicial": "Início Vigência",
-                    "dataVigenciaFinal": "Fim Vigência"
-                })
-                st.dataframe(df_exibicao)
+                ]])
 
                 csv = df.to_csv(index=False)
                 st.download_button("📥 Baixar resultados em CSV", csv, "resultado.csv")

@@ -1,47 +1,21 @@
-
 import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
 
-def plot_price_trend_bar(df, descricao_item):
-    df['dataVigenciaInicial'] = pd.to_datetime(df['dataVigenciaInicial'])
-    df = df.sort_values('dataVigenciaInicial')
+print("INICIANDO O PAINEL DE PREÇOS - COMPRAS PÚBLICAS (API ARP)")
 
-    fig = px.bar(
-        df,
-        x='dataVigenciaInicial',
-        y='valorUnitario',
-        labels={
-            'dataVigenciaInicial': 'Data de Vigência',
-            'valorUnitario': 'Valor Unitário (R$)'
-        },
-        title=f'Preços por Período - {descricao_item}',
-        template='plotly_white',
-        color='valorUnitario',
-        color_continuous_scale='Blues'
-    )
-
-    fig.update_layout(
-        title_font_size=20,
-        title_x=0.5,
-        xaxis=dict(showgrid=True, tickangle=-45),
-        yaxis=dict(showgrid=True, tickprefix='R$ '),
-        hovermode='x unified'
-    )
-
-    return fig
-def plot_price_trend_line(df, descricao_item):
-    df['dataVigenciaInicial'] = pd.to_datetime(df['dataVigenciaInicial'])
-    df = df.sort_values('dataVigenciaInicial')
+def plot_price_trend(df, descricao_item):
+    df['dataVigenciaInicio'] = pd.to_datetime(df['dataVigenciaInicio'])
+    df = df.sort_values('dataVigenciaInicio')
 
     fig = px.line(
         df,
-        x='dataVigenciaInicial',
+        x='dataVigenciaInicio',
         y='valorUnitario',
         markers=True,
         labels={
-            'dataVigenciaInicial': 'Data de Vigência',
+            'dataVigenciaInicio': 'Data de Vigência',
             'valorUnitario': 'Valor Unitário (R$)'
         },
         title=f'Evolução dos Preços - {descricao_item}',
@@ -70,20 +44,25 @@ data_inicio = st.date_input("Data de início da vigência:", pd.to_datetime("202
 data_fim = st.date_input("Data de fim da vigência:", pd.to_datetime("2025-04-30"))
 
 if st.button("Consultar Dados do Produto/Serviço"):
-    url = "https://dadosabertos.compras.gov.br/modulo-arp/2_consultarARPItem"
+    # url = "https://dadosabertos.compras.gov.br/modulo-arp/2_consultarARPItem"
+    url = "https://dadosabertos.compras.gov.br/modulo-arp/2_consultarARPItem?pagina=1&tamanhoPagina=10&dataVigenciaInicial=2025-01-01&dataVigenciaFinal=2025-04-30&codigoItem=27138"
     params = {
         "pagina": 1,
-        "tamanhoPagina": 100,
+        "tamanhoPagina": 10,
         "dataVigenciaInicial": data_inicio.strftime("%Y-%m-%d"),
         "dataVigenciaFinal": data_fim.strftime("%Y-%m-%d"),
         "codigoItem": codigo_item
     }
 
     with st.spinner("Consultando dados..."):
-        print(f"URL: {requests}")
-        resposta = requests.get(url, params=params)
+        # resposta = requests.get(url, params=params)
+        resposta = requests.get(url)
+        print(f"Resposta da API: {resposta.status_code}")
+        dados_json = resposta.json().get("resultado", [])
+        print(f"Dados retornados: {dados_json}")
         if resposta.status_code == 200:
             dados_json = resposta.json().get("resultado", [])
+            print(f"Dados retornados: {dados_json}")
             if dados_json:
                 df = pd.DataFrame(dados_json)
                 df["dataVigenciaInicial"] = pd.to_datetime(df["dataVigenciaInicial"])
@@ -91,24 +70,26 @@ if st.button("Consultar Dados do Produto/Serviço"):
 
                 st.success(f"{len(df)} registros encontrados.")
 
-                fig = plot_price_trend_bar(df, df["descricaoItem"].iloc[0])
-                st.plotly_chart(fig, use_container_width=True)
+                # Gráfico de preços
+                # fig = px.box(
+                #     df,
+                #     x=df["dataVigenciaInicial"].dt.to_period("M").astype(str),
+                #     y="valorUnitario",
+                #     title="📈 Preços por Mês de Vigência",
+                #     labels={"x": "Mês", "valorUnitario": "Valor Unitário (R$)"}
+                # )
                 
-                df_exibicao = df[[
-                    "descricaoItem", "valorUnitario", "quantidadeHomologadaItem", "nomeRazaoSocialFornecedor", 
-                    "nomeUnidadeGerenciadora", "nomeModalidadeCompra", "dataVigenciaInicial", "dataVigenciaFinal"
-                ]].rename(columns={
-                    "descricaoItem": "Descrição do Item",
-                    "valorUnitario": "Valor (R$)",
-                    "quantidadeHomologadaItem": "Qtde.",
-                    "nomeRazaoSocialFornecedor": "Fornecedor",
-                    "nomeUnidadeGerenciadora": "Comprador",
-                    "nomeModalidadeCompra": "Modalidade",
-                    "dataVigenciaInicial": "Início Vigência",
-                    "dataVigenciaFinal": "Fim Vigência"
-                })
-                st.dataframe(df_exibicao)
+                fig = plot_price_trend(df, df["descricaoItem"])
+                
+                st.plotly_chart(fig, use_container_width=True)
 
+                # Tabela de dados
+                st.dataframe(df[[
+                    "descricaoItem", "valorUnitario", "nomeRazaoSocialFornecedor", 
+                    "nomeUnidadeGerenciadora", "nomeModalidadeCompra", "dataVigenciaInicial", "dataVigenciaFinal"
+                ]])
+
+                # Exportar CSV
                 csv = df.to_csv(index=False)
                 st.download_button("📥 Baixar resultados em CSV", csv, "resultado.csv")
             else:
